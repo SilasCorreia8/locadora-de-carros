@@ -16,6 +16,9 @@ function ReservationPage() {
     phone: '',
   });
 
+  // Estado para guardar as mensagens de erro de cada campo.
+  const [errors, setErrors] = useState({});
+
   // Função genérica para atualizar o estado do formulário
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -25,16 +28,52 @@ function ReservationPage() {
     }));
   };
 
+  // Função para verificar os dados do formulário e retornar um objeto com os erros.
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Validação do nome
+    if (!formData.name.trim()) {
+      newErrors.name = 'O nome completo é obrigatório.';
+    }
+
+    // Validação do e-mail
+    if (!formData.email) {
+      newErrors.email = 'O e-mail é obrigatório.';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      // Regex simples para verificar o formato do e-mail
+      newErrors.email = 'O formato do e-mail é inválido.';
+    }
+
+    // Validação do telefone
+    if (!formData.phone) {
+      newErrors.phone = 'O telefone é obrigatório.';
+    } else if (!/^\d{10,11}$/.test(formData.phone.replace(/\D/g, ''))) {
+      // Regex para aceitar números de 10 ou 11 dígitos (com ou sem DDD)
+      newErrors.phone = 'O telefone deve conter 10 ou 11 dígitos.';
+    }
+
+    return newErrors;
+  };
+
   // Função chamada quando o formulário é enviado
   const handleSubmit = (event) => {
-    event.preventDefault(); // Impede o recarregamento da página
-    // Aqui é onde, no futuro, você enviaria os dados para um back-end
-    console.log("Dados da reserva a serem enviados:", {
-      carDetails: car,
-      customerDetails: formData,
-    });
-    // Redireciona o usuário para a página de confirmação
-    navigate('/confirmation');
+    event.preventDefault();
+    const formErrors = validateForm();
+
+    // Se o objeto de erros tiver qualquer chave (ou seja, se houver erros)...
+    if (Object.keys(formErrors).length > 0) {
+      // ...atualizamos o estado de erros para exibi-los na tela e paramos a execução.
+      setErrors(formErrors);
+    } else {
+      // Se não houver erros, limpamos qualquer erro antigo e prosseguimos.
+      setErrors({});
+      console.log("Dados da reserva válidos e a serem enviados:", {
+        carDetails: car,
+        customerDetails: formData,
+      });
+      navigate('/confirmation');
+    }
   };
 
   // Se, por algum motivo, não houver dados do carro, mostramos uma mensagem de erro.
@@ -73,9 +112,10 @@ function ReservationPage() {
             id="name"
             value={formData.name} 
             onChange={handleChange} 
-            required 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`}
           />
+          {/* Exibição da menssagem de erro */}
+          {errors.name && <p className="mt-2 text-sm text-red-600">{errors.name}</p>}
         </div>
         
         <div>
@@ -88,24 +128,26 @@ function ReservationPage() {
             id="email"
             value={formData.email} 
             onChange={handleChange} 
-            required 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`}
           />
+          {/* Exibição da menssagem de erro */}
+          {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
         </div>
 
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
             Telefone:
           </label>
-          <input 
+          <input
             type="tel" 
             name="phone" 
             id="phone"
             value={formData.phone} 
             onChange={handleChange} 
-            required 
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`}
           />
+          {/* Exibição da menssagem de erro */}
+          {errors.phone && <p className="mt-2 text-sm text-red-600">{errors.phone}</p>}
         </div>
         
         <button 
