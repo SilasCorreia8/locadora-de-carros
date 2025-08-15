@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 // Recebe a função 'onFilterChange' via props
-function SearchBar({ onFilterChange }) {
+function SearchBar({ onFilterChange,}) {
   // Cria um estado para guardar o valor do tipo de carro selecionado
   const [carType, setCarType] = useState('');
 
@@ -14,39 +14,12 @@ function SearchBar({ onFilterChange }) {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-      <form className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-        {/* As datas ainda não são funcionais, focaremos no filtro por tipo */}
-        
-        {/* Campo de Data de Retirada */}
-        <div>
-          <label htmlFor="retirada" className="block text-sm font-medium text-gray-700">
-            Data de Retirada
-          </label>
-          <input
-            type="date"
-            id="retirada"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          />
-        </div>
-
-        {/* Campo de Data de Devolução */}
-        <div>
-          <label htmlFor="devolucao" className="block text-sm font-medium text-gray-700">
-            Data de Devolução
-          </label>
-          <input
-            type="date"
-            id="devolucao"
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          />
-        </div>
-
-
+      <form className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+      
         {/* Campo de Tipo de Carro */}
         <div>
           <label htmlFor="carType" className="block text-sm font-medium text-gray-700">
-            Tipo de Carro:
-            {/* Conecta o estado ao select */}
+            Filtrar por Tipo de Carro
           </label>
           <select
             id="carType"
@@ -62,12 +35,12 @@ function SearchBar({ onFilterChange }) {
           </select>
         </div>
 
-        {/* Botão de Busca */}
+        {/* Botão de Filtrar */}
         <button
-          type="submit"
-          className="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          type="button"
+          className="bg-gray-800 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700"
         >
-          Buscar
+          Filtrar
         </button>
 
       </form>

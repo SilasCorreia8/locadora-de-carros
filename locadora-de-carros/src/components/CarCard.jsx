@@ -4,7 +4,7 @@ function CarCard({ car }) {
   return (
     // Envolva todo o card com o componente Link.
     // A prop 'to' define o destino. Usamos template string para criar a URL dinâmica.
-    <Link to={`/car/${car.id}`} className="car-card-link group">
+    <Link to={`/car/${car.id}`} state={{ car: car }} className="group">
       <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
         
         <img 
