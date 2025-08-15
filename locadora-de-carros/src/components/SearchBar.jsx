@@ -32,6 +32,7 @@ function SearchBar({ onFilterChange }) {
             <option value="Econômico">Econômico</option>
             <option value="Econômico com A/C">Econômico com A/C</option>
             <option value="SUV">SUV</option>
+            <option value="Picape">Picape</option>
           </select>
         </label>
       </form>
