@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import CarDetailsPage from './pages/CarDetailsPage';
+import ReservationPage from './pages/ReservationPage';
+import ConfirmationPage from './pages/ConfirmationPage';
 import './App.css';
 
 function App() {
@@ -13,6 +15,8 @@ function App() {
 
         {/* Rota para a página de detalhes. O ":carId" é um parâmetro dinâmico */}
         <Route path="/car/:carId" element={<CarDetailsPage />} />
+        <Route path="/reservation" element={<ReservationPage />} />
+        <Route path="/confirmation" element={<ConfirmationPage />} />
       </Routes>
     </div>
   );
