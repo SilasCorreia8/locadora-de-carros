@@ -1,35 +1,37 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react'; //Importe o useState
+import { cars as allCars } from './mockData'; // Renomea 'cars' para 'allCars'
+import CarList from './components/CarList';
+import SearchBar from './components/SearchBar';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Estado para guardar a lista de carros que será exibida
+  const [filteredCars, setFilteredCars] = useState(allCars);
+
+  // Função que o App vai usar para filtrar os carros
+  // Ela recebe o tipo de carro selecionado no SearchBar
+  const handleFilterChange = (carType) => {
+    // Se nenhum tipo for selecionado (string vazia), mostra todos os carros
+    if (!carType) {
+      setFilteredCars(allCars);
+    } else {
+      // Filtra o array original de carros
+      const filtered = allCars.filter(car => car.type === carType);
+      setFilteredCars(filtered);
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div>
+      <h1>Carros Disponíveis</h1>
+      {/* Passa a função para o SearchBar via props */}
+      <SearchBar onFilterChange={handleFilterChange} />
+      <main>
+        {/* Passamos a lista JÁ FILTRADA para o CarList */}
+        <CarList cars={filteredCars} />
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
