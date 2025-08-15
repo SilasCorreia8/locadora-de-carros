@@ -3,6 +3,7 @@ import { cars as allCars } from '../mockData';
 import CarList from '../components/CarList';
 import SearchBar from '../components/SearchBar';
 
+
 function HomePage() {
   const [filteredCars, setFilteredCars] = useState(allCars);
 
@@ -16,13 +17,10 @@ function HomePage() {
   };
 
   return (
-    <>
-      <h1>Carros Disponíveis</h1>
+    <div>
       <SearchBar onFilterChange={handleFilterChange} />
-      <main>
-        <CarList cars={filteredCars} />
-      </main>
-    </>
+      <CarList cars={filteredCars} />
+    </div>
   );
 }
 
