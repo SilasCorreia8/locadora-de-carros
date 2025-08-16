@@ -35,6 +35,11 @@ function ReservationPage() {
   // Estado para guardar as mensagens de erro de cada campo.
   const [errors, setErrors] = useState({});
 
+  // Capturar data de hoje
+  // Cria uma string com a data de hoje no formato YYYY-MM-DD,
+  // que é o formato que o atributo 'min' do input de data exige.
+  const today = new Date().toISOString().split('T')[0];
+
   // Calculo dos valores
   const { numberOfDays, totalPrice } = useMemo(() => {
     const days = calculateDays(dates.startDate, dates.endDate);
@@ -82,6 +87,9 @@ function ReservationPage() {
     // Validação das datas
     if (!dates.startDate) {
       newErrors.startDate = 'A data de retirada é obrigatória.';
+    } else if (dates.startDate < today) {
+      // Verificação contra a data atual
+      newErrors.startDate = 'A data de retirada não pode ser no passado.';
     }
 
     if (!dates.endDate) { 
@@ -112,6 +120,8 @@ function ReservationPage() {
       console.log("Dados da reserva válidos e a serem enviados:", {
         carDetails: car,
         customerDetails: formData,
+        dates: dates,
+        totalPrice: totalPrice,
       });
       navigate('/confirmation');
     }
@@ -145,13 +155,13 @@ function ReservationPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Data de Retirada</label>
-            <input type="date" name="startDate" id="startDate" value={dates.startDate} onChange={handleChange}
+            <input type="date" name="startDate" id="startDate" value={dates.startDate} onChange={handleChange} min={today}
               className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.startDate ? 'border-red-500' : 'border-gray-300'}`} />
             {errors.startDate && <p className="mt-2 text-sm text-red-600">{errors.startDate}</p>}
           </div>
           <div>
             <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">Data de Devolução</label>
-            <input type="date" name="endDate" id="endDate" value={dates.endDate} onChange={handleChange}
+            <input type="date" name="endDate" id="endDate" value={dates.endDate} onChange={handleChange} min={dates.startDate || today}
               className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.endDate ? 'border-red-500' : 'border-gray-300'}`} />
             {errors.endDate && <p className="mt-2 text-sm text-red-600">{errors.endDate}</p>}
           </div>
