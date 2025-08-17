@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
-import HomePage from './pages/HomePage';
-import CarDetailsPage from './pages/CarDetailsPage';
+import DashboardPage from './pages/DashboardPage';
 import ReservationPage from './pages/ReservationPage';
 import ConfirmationPage from './pages/ConfirmationPage';
 import './App.css';
@@ -15,11 +14,10 @@ function App() {
         {/* O componente <Routes> gerencia qual <Route> será exibida */}
         <Routes>
           {/* Rota para a página inicial. path="/" mostra o componente HomePage */}
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<DashboardPage />} />
 
           {/* Rota para a página de detalhes. O ":carId" é um parâmetro dinâmico */}
-          <Route path="/car/:carId" element={<CarDetailsPage />} />
-          <Route path="/reservation" element={<ReservationPage />} />
+          <Route path="/nova-reserva" element={<ReservationPage />} />
           <Route path="/confirmation" element={<ConfirmationPage />} />
         </Routes>
 

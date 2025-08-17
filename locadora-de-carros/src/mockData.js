@@ -21,3 +21,24 @@ export const cars = [
     imageUrl: ''
   },
 ];
+
+export const customers = [
+  {
+    id: 101,
+    name: 'João da Silva',
+    email: 'joao.silva@example.com',
+    hasPending: false,
+  },
+  {
+    id: 102,
+    name: 'Maria Oliveira',
+    email: 'maria.oliveira@example.com',
+    hasPending: true, // Este cliente tem pendências
+  },
+  {
+    id: 103,
+    name: 'Carlos Pereira',
+    email: 'carlos.pereira@example.com',
+    hasPending: false,
+  },
+];

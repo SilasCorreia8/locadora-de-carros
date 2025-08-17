@@ -1,36 +1,27 @@
 import { useState, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { cars as allCars, customers as allCustomers } from '../mockData';
 
 // Função para calcular a diferença de dias entre duas datas.
 function calculateDays(startDate, endDate) {
   if (!startDate || !endDate) return 0;
   const start = new Date(startDate);
   const end = new Date(endDate);
+  if (start > end) return 0; // Impede cálculo com data final anterior à inicial
   const difference = end.getTime() - start.getTime();
   const totalDays = Math.ceil(difference / (1000 * 3600 * 24));
-  return totalDays <= 0 ? 1 : totalDays; // Mínimo de 1 dia de aluguel
+  return totalDays === 0 ? 1 : totalDays; // Mínimo de 1 dia de aluguel
 }
 
 function ReservationPage() {
   // useNavigate é uma função que nos permite redirecionar o usuário
   const navigate = useNavigate();
-  
-  // useLocation nos dá acesso aos dados da navegação, incluindo o 'state' que passamos
-  const location = useLocation();
-  
-  const car = location.state?.car; // Usamos '?' para o caso de alguém acessar a URL diretamente
-
-  const [dates, setDates] = useState({
-    startDate: '',
-    endDate: ''
-  });
-
-  // Estado para controlar os dados do formulário
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-  });
+  // Guarda o cliente que o funcionário selecionou. Inicia como nulo.
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  // Guarda o carro que o funcionário selecionou. Inicia como nulo.
+  const [selectedCar, setSelectedCar] = useState(null);
+  // Guarda as datas da reserva.
+  const [dates, setDates] = useState({ startDate: '', endDate: '' }); 
 
   // Estado para guardar as mensagens de erro de cada campo.
   const [errors, setErrors] = useState({});
@@ -40,86 +31,90 @@ function ReservationPage() {
   // que é o formato que o atributo 'min' do input de data exige.
   const today = new Date().toISOString().split('T')[0];
 
-  // Calculo dos valores
+  {/* --- Calculo dos valores --- */}
+
+  // 'useMemo' recalcula o valor total apenas quando uma das dependências (datas, carro) muda.
   const { numberOfDays, totalPrice } = useMemo(() => {
     const days = calculateDays(dates.startDate, dates.endDate);
-    const price = car ? car.pricePerDay * days : 0;
+    const price = selectedCar ? selectedCar.pricePerDay * days : 0;
     return { numberOfDays: days, totalPrice: price };
-  }, [dates, car]);
+  }, [dates, selectedCar]);
 
-  // Função genérica para atualizar o estado do formulário
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    // Atualiza tanto os dados do formulário quanto as datas
-    if (name === 'startDate' || name === 'endDate') {
-      setDates(prev => ({ ...prev, [name]: value }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+  // Função executada quando o funcionário seleciona um cliente no dropdown.
+  // A função agora recebe o evento completo para poder resetar a seleção.
+  const handleCustomerSelect = (event) => {
+    const customerId = event.target.value;
+    // Se o usuário selecionar a opção "Selecione um cliente...", não fazemos nada.
+    if (!customerId) return; 
+
+    const customer = allCustomers.find(c => c.id === parseInt(customerId));
+    
+    // Verificamos se o cliente tem pendências.
+    if (customer.hasPending) {
+      alert(`Atenção: Cliente ${customer.name} possui pendências financeiras! A reserva não pode continuar.`);
+      
+      // CRUCIAL: Resetamos a seleção no dropdown para a opção padrão.
+      event.target.value = "";
+      // Limpamos os estados para garantir que nada fique selecionado.
+      setSelectedCustomer(null);
+      setSelectedCar(null);
+      
+      // Interrompemos a função aqui para não selecionar o cliente.
+      return; 
     }
+
+    // Se não houver pendências, o fluxo continua normalmente.
+    setSelectedCustomer(customer);
+    setSelectedCar(null);
+  };
+
+  // Função executada quando o funcionário clica em um carro na lista.
+  const handleCarSelect = (car) => {
+    setSelectedCar(car);
+    // Rola a tela para o topo para que o funcionário veja a seção de finalização.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Função para atualizar o estado das datas.
+  const handleDateChange = (event) => {
+    const { name, value } = event.target;
+    setDates(prev => ({ ...prev, [name]: value }));
   };
 
   // Função para verificar os dados do formulário e retornar um objeto com os erros.
   const validateForm = () => {
     const newErrors = {};
 
-    // Validação do nome
-    if (!formData.name.trim()) {
-      newErrors.name = 'O nome completo é obrigatório.';
+    // Valida se um carro foi selecionado.
+    if (!selectedCar) {
+      newErrors.car = 'É necessário selecionar um carro para a reserva.';
     }
 
-    // Validação do e-mail
-    if (!formData.email) {
-      newErrors.email = 'O e-mail é obrigatório.';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      // Regex simples para verificar o formato do e-mail
-      newErrors.email = 'O formato do e-mail é inválido.';
-    }
-
-    // Validação do telefone
-    if (!formData.phone) {
-      newErrors.phone = 'O telefone é obrigatório.';
-    } else if (!/^\d{10,11}$/.test(formData.phone.replace(/\D/g, ''))) {
-      // Regex para aceitar números de 10 ou 11 dígitos (com ou sem DDD)
-      newErrors.phone = 'O telefone deve conter 10 ou 11 dígitos.';
-    }
-
-
-    // Validação das datas
-    if (!dates.startDate) {
-      newErrors.startDate = 'A data de retirada é obrigatória.';
-    } else if (dates.startDate < today) {
-      // Verificação contra a data atual
-      newErrors.startDate = 'A data de retirada não pode ser no passado.';
-    }
-
-    if (!dates.endDate) { 
-      newErrors.endDate = 'A data de devolução é obrigatória.';
-    }
+    // Validação das datas (lógica mantida).
+    if (!dates.startDate) newErrors.startDate = 'A data de retirada é obrigatória.';
+    else if (dates.startDate < today) newErrors.startDate = 'A data de retirada não pode ser no passado.';
+    if (!dates.endDate) newErrors.endDate = 'A data de devolução é obrigatória.';
+    else if (dates.endDate < dates.startDate) newErrors.endDate = 'A data de devolução não pode ser anterior à de retirada.';
     
-    if (dates.startDate && dates.endDate && new Date(dates.endDate) < new Date(dates.startDate)) {
-      newErrors.endDate = 'A data de devolução não pode ser anterior à de retirada.';
-    }
-
     return newErrors;
-  };
+  };   
 
   
 
-  // Função chamada quando o formulário é enviado
+  // Função chamada quando o formulário é enviado.
   const handleSubmit = (event) => {
     event.preventDefault();
     const formErrors = validateForm();
-
-    // Se o objeto de erros tiver qualquer chave (ou seja, se houver erros)...
     if (Object.keys(formErrors).length > 0) {
-      // ...atualizamos o estado de erros para exibi-los na tela e paramos a execução.
       setErrors(formErrors);
+      // Alerta para o funcionário caso o carro não tenha sido selecionado
+      if (formErrors.car) alert(formErrors.car);
     } else {
-      // Se não houver erros, limpamos qualquer erro antigo e prosseguimos.
       setErrors({});
-      console.log("Dados da reserva válidos e a serem enviados:", {
-        carDetails: car,
-        customerDetails: formData,
+      // Simula o envio dos dados para o back-end.
+      console.log("Dados da reserva a serem registrados:", {
+        customerDetails: selectedCustomer,
+        carDetails: selectedCar,
         dates: dates,
         totalPrice: totalPrice,
       });
@@ -127,114 +122,94 @@ function ReservationPage() {
     }
   };
 
-  // Se, por algum motivo, não houver dados do carro, mostramos uma mensagem de erro.
-  if (!car) {
-    return (
-       <div className="text-center py-10">
-        <h2 className="text-2xl font-bold">Erro: Nenhum carro selecionado para reserva.</h2>
-        <Link to="/" className="text-blue-500 hover:underline mt-4 inline-block">
-          Voltar para a busca
-        </Link>
-      </div>
-    );
-  }
 
   return (
-    // Container principal da página de reserva
-    <div className="max-w-2xl mx-auto my-8 p-8 bg-white rounded-lg shadow-xl">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Concluir Reserva</h1>
-      
-      <div className="bg-gray-100 p-4 rounded-lg mb-8 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800">{car.name}</h3>
-        <p className="text-gray-600">Preço por dia: R$ {car.pricePerDay.toFixed(2)}</p>
+    <div className="max-w-6xl mx-auto my-8">
+      {/* SEÇÃO DE FINALIZAÇÃO
+          Esta seção só aparece quando um carro é selecionado e fica fixa no topo
+          para que o funcionário possa preencher as datas e finalizar a reserva. */}
+      {selectedCar && (
+        <form onSubmit={handleSubmit} className="sticky top-4 z-10 bg-blue-100 border-l-4 border-blue-500 p-6 rounded-lg shadow-xl mb-8">
+           <h2 className="text-2xl font-bold mb-4">Passo 3: Período e Finalização</h2>
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+              {/* Resumo da seleção */}
+              <div className="lg:col-span-1">
+                <p><strong>Cliente:</strong> {selectedCustomer.name}</p>
+                <p><strong>Carro:</strong> {selectedCar.name}</p>
+              </div>
+              {/* Campos de Data */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:col-span-2 gap-4">
+                <div>
+                  <label htmlFor="startDate" className="block text-sm font-medium">Data de Retirada</label>
+                  <input type="date" name="startDate" id="startDate" value={dates.startDate} onChange={handleDateChange} min={today}
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.startDate ? 'border-red-500' : 'border-gray-300'}`} />
+                  {errors.startDate && <p className="mt-1 text-xs text-red-600">{errors.startDate}</p>}
+                </div>
+                <div>
+                  <label htmlFor="endDate" className="block text-sm font-medium">Data de Devolução</label>
+                  <input type="date" name="endDate" id="endDate" value={dates.endDate} onChange={handleDateChange} min={dates.startDate || today}
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.endDate ? 'border-red-500' : 'border-gray-300'}`} />
+                  {errors.endDate && <p className="mt-1 text-xs text-red-600">{errors.endDate}</p>}
+                </div>
+              </div>
+              {/* Valor Total e Botão */}
+              <div className="lg:col-span-1 flex flex-col items-center justify-center">
+                {numberOfDays > 0 && (
+                  <p className="text-xl font-bold text-gray-800">
+                    Total: R$ {totalPrice.toFixed(2)}
+                  </p>
+                )}
+                <button type="submit" className="w-full mt-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700">
+                  Finalizar Reserva
+                </button>
+              </div>
+           </div>
+        </form>
+      )}
+
+      {/* SEÇÃO DE SELEÇÃO DE CLIENTE */}
+      <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+        <h2 className="text-2xl font-bold mb-4">Passo 1: Selecione o Cliente</h2>
+        <select 
+          onChange={handleCustomerSelect} 
+          defaultValue=""
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 text-lg p-2"
+        >
+          <option value="" disabled>Selecione um cliente...</option>
+          {allCustomers.map(customer => (
+            <option key={customer.id} value={customer.id}>
+              {customer.name} {customer.hasPending ? '(Com Pendências)' : ''}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Formulário */}
-      <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-        {/* Campos de Data*/}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Data de Retirada</label>
-            <input type="date" name="startDate" id="startDate" value={dates.startDate} onChange={handleChange} min={today}
-              className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.startDate ? 'border-red-500' : 'border-gray-300'}`} />
-            {errors.startDate && <p className="mt-2 text-sm text-red-600">{errors.startDate}</p>}
+      {/* SEÇÃO DE SELEÇÃO DE CARRO
+          Esta seção só aparece quando um cliente já foi selecionado. */}
+      {selectedCustomer && (
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h2 className="text-2xl font-bold mb-4">
+            Passo 2: Selecione o Carro para <span className="text-blue-600">{selectedCustomer.name}</span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {allCars.map(car => (
+              <div key={car.id} onClick={() => handleCarSelect(car)} className="cursor-pointer">
+                <div className={`rounded-lg shadow-md overflow-hidden transition-all duration-300 ${selectedCar?.id === car.id ? 'ring-4 ring-blue-500 scale-105' : 'hover:shadow-xl hover:scale-105'}`}>
+                  <img src={car.imageUrl || 'https://i.imgur.com/8N4e6c2.png'} alt={car.name} className="w-full h-48 object-cover" />
+                  <div className="p-4 text-center">
+                    <h3 className="text-lg font-bold text-gray-800">{car.name}</h3>
+                    <p className="text-sm text-gray-500">{car.type}</p>
+                    <p className="mt-4 text-xl font-bold text-gray-900">
+                      R$ {car.pricePerDay.toFixed(2)}
+                      <span className="text-sm font-normal text-gray-500"> / dia</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div>
-            <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">Data de Devolução</label>
-            <input type="date" name="endDate" id="endDate" value={dates.endDate} onChange={handleChange} min={dates.startDate || today}
-              className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.endDate ? 'border-red-500' : 'border-gray-300'}`} />
-            {errors.endDate && <p className="mt-2 text-sm text-red-600">{errors.endDate}</p>}
-          </div>
         </div>
-
-        {/* Nomde Completo */}
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-            Nome Completo:
-          </label>
-          <input 
-            type="text" 
-            name="name" 
-            id="name"
-            value={formData.name} 
-            onChange={handleChange} 
-            className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`}
-          />
-          {/* Exibição da menssagem de erro */}
-          {errors.name && <p className="mt-2 text-sm text-red-600">{errors.name}</p>}
-        </div>
-        
-        {/* E-mail */}
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            E-mail:
-          </label>
-          <input 
-            type="email" 
-            name="email"
-            id="email"
-            value={formData.email} 
-            onChange={handleChange} 
-            className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`}
-          />
-          {/* Exibição da menssagem de erro */}
-          {errors.email && <p className="mt-2 text-sm text-red-600">{errors.email}</p>}
-        </div>
-
-        {/* Telefone */}
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-            Telefone:
-          </label>
-          <input
-            type="tel" 
-            name="phone" 
-            id="phone"
-            value={formData.phone} 
-            onChange={handleChange} 
-            className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.phone ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'}`}
-          />
-          {/* Exibição da menssagem de erro */}
-          {errors.phone && <p className="mt-2 text-sm text-red-600">{errors.phone}</p>}
-        </div>
-        
-        {/* Exibição do Valor Total */}
-        {numberOfDays > 0 && (
-          <div className="text-center bg-gray-50 p-4 rounded-lg">
-            <p className="text-gray-600">Total de dias: {numberOfDays}</p>
-            <p className="text-2xl font-bold text-gray-800 mt-1">
-              Valor Total: R$ {totalPrice.toFixed(2)}
-            </p>
-          </div>
-        )}
-
-        <button 
-          type="submit"
-          className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors text-lg"
-        >
-          Confirmar Reserva
-        </button>
-      </form>
+      )}
     </div>
   );
 }
