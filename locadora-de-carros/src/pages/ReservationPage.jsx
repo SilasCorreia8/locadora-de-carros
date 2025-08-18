@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { cars as allCars, customers as allCustomers } from '../mockData';
-
+import { fetchVehicles, fetchCustomers, createReservation } from '../services/api';
 // Função para calcular a diferença de dias entre duas datas.
 function calculateDays(startDate, endDate) {
   if (!startDate || !endDate) return 0;
@@ -16,6 +15,12 @@ function calculateDays(startDate, endDate) {
 function ReservationPage() {
   // useNavigate é uma função que nos permite redirecionar o usuário
   const navigate = useNavigate();
+
+  const [customers, setCustomers] = useState([]);
+  const [cars, setCars] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null); // Estado para guardar erros da API
+
   // Guarda o cliente que o funcionário selecionou. Inicia como nulo.
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   // Guarda o carro que o funcionário selecionou. Inicia como nulo.
@@ -31,6 +36,34 @@ function ReservationPage() {
   // que é o formato que o atributo 'min' do input de data exige.
   const today = new Date().toISOString().split('T')[0];
 
+  // 'useEffect' 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [fetchedVehicles, fetchedCustomers] = await Promise.all([
+          fetchVehicles(),
+          fetchCustomers() // Usando a simulação por enquanto
+        ]);
+        
+        // Adaptamos os dados da API para o formato que nosso front-end espera
+        const adaptedCars = fetchedVehicles.map(car => ({
+            ...car,
+            pricePerDay: car.dailyRateInCents / 100, // Convertendo centavos
+            name: car.modelName
+        }));
+
+        setCars(adaptedCars);
+        setCustomers(fetchedCustomers);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
   {/* --- Calculo dos valores --- */}
 
   // 'useMemo' recalcula o valor total apenas quando uma das dependências (datas, carro) muda.
@@ -44,41 +77,31 @@ function ReservationPage() {
   // A função agora recebe o evento completo para poder resetar a seleção.
   const handleCustomerSelect = (event) => {
     const customerId = event.target.value;
-    // Se o usuário selecionar a opção "Selecione um cliente...", não fazemos nada.
-    if (!customerId) return; 
-
-    const customer = allCustomers.find(c => c.id === parseInt(customerId));
+    if (!customerId) return;
+    const customer = customers.find(c => c.customerId === customerId);
     
-    // Verificamos se o cliente tem pendências.
-    if (customer.hasPending) {
-      alert(`Atenção: Cliente ${customer.name} possui pendências financeiras! A reserva não pode continuar.`);
-      
-      // CRUCIAL: Resetamos a seleção no dropdown para a opção padrão.
-      event.target.value = "";
-      // Limpamos os estados para garantir que nada fique selecionado.
-      setSelectedCustomer(null);
-      setSelectedCar(null);
-      
-      // Interrompemos a função aqui para não selecionar o cliente.
-      return; 
+    // As validações da API (hasPendency, isSuspended) acontecerão no backend.
+    // O front-end pode dar um aviso prévio.
+    if (customer.hasPendency) {
+      alert(`Atenção: Cliente ${customer.name} possui pendências financeiras!`);
     }
-
-    // Se não houver pendências, o fluxo continua normalmente.
+     if (customer.isSuspended) {
+      alert(`Atenção: Cliente ${customer.name} está suspenso! A reserva pode falhar.`);
+    }
+    
     setSelectedCustomer(customer);
     setSelectedCar(null);
   };
 
   // Função executada quando o funcionário clica em um carro na lista.
-  const handleCarSelect = (car) => {
+  const handleCarSelect = (car) => { 
     setSelectedCar(car);
-    // Rola a tela para o topo para que o funcionário veja a seção de finalização.
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
 
   // Função para atualizar o estado das datas.
-  const handleDateChange = (event) => {
-    const { name, value } = event.target;
-    setDates(prev => ({ ...prev, [name]: value }));
+  const handleDateChange = (event) => { 
+    setDates(prev => ({ ...prev, [name]: event.target.name, value: event.target.value })); 
   };
 
   // Função para verificar os dados do formulário e retornar um objeto com os erros.
@@ -102,7 +125,7 @@ function ReservationPage() {
   
 
   // Função chamada quando o formulário é enviado.
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
@@ -120,8 +143,36 @@ function ReservationPage() {
       });
       navigate('/confirmation');
     }
+
+    const reservationPayload = {
+      customerData: {
+        name: selectedCustomer.name,
+        document: selectedCustomer.document
+      },
+      vehicleData: {
+        modelName: selectedCar.modelName,
+        year: selectedCar.year,
+        licensePlate: selectedCar.licensePlate
+      },
+      rentalDate: dates.startDate,
+      returnDate: dates.endDate
+    };
+
+    try {
+      // Chamada à função da nossa camada de serviço
+      await createReservation(reservationPayload);
+      // Se a reserva for bem-sucedida, redireciona
+      navigate('/confirmation');
+    } catch (apiError) {
+      // Se a API retornar um erro (ex: cliente com pendência), exibimos a mensagem
+      alert(`Erro ao criar reserva: ${apiError.message}`);
+      setFormErrors({ api: apiError.message });
+    }
+    
   };
 
+  if (isLoading) return <div className="text-center p-8 text-xl font-semibold">Carregando dados da API...</div>;
+  if (error) return <div className="text-center p-8 text-xl text-red-600">Erro ao carregar dados: {error}</div>;
 
   return (
     <div className="max-w-6xl mx-auto my-8">
@@ -170,15 +221,11 @@ function ReservationPage() {
       {/* SEÇÃO DE SELEÇÃO DE CLIENTE */}
       <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
         <h2 className="text-2xl font-bold mb-4">Passo 1: Selecione o Cliente</h2>
-        <select 
-          onChange={handleCustomerSelect} 
-          defaultValue=""
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 text-lg p-2"
-        >
+        <select onChange={handleCustomerSelect} defaultValue="">
           <option value="" disabled>Selecione um cliente...</option>
-          {allCustomers.map(customer => (
-            <option key={customer.id} value={customer.id}>
-              {customer.name} {customer.hasPending ? '(Com Pendências)' : ''}
+          {customers.map(customer => (
+            <option key={customer.customerId} value={customer.customerId}>
+              {customer.name} {customer.hasPendency ? '(Com Pendências)' : ''} {customer.isSuspended ? '(Suspenso)' : ''}
             </option>
           ))}
         </select>
@@ -188,13 +235,12 @@ function ReservationPage() {
           Esta seção só aparece quando um cliente já foi selecionado. */}
       {selectedCustomer && (
         <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-4">
-            Passo 2: Selecione o Carro para <span className="text-blue-600">{selectedCustomer.name}</span>
-          </h2>
+          <h2 className="text-2xl font-bold mb-4">Passo 2: Selecione o Carro para <span className="text-blue-600">{selectedCustomer.name}</span></h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {allCars.map(car => (
-              <div key={car.id} onClick={() => handleCarSelect(car)} className="cursor-pointer">
-                <div className={`rounded-lg shadow-md overflow-hidden transition-all duration-300 ${selectedCar?.id === car.id ? 'ring-4 ring-blue-500 scale-105' : 'hover:shadow-xl hover:scale-105'}`}>
+            {cars.map(car => (
+              <div key={car.vehicleId} onClick={() => handleCarSelect(car)} className="cursor-pointer">
+                {/* O card agora usa os dados adaptados da API */}
+                <div className={`rounded-lg shadow-md overflow-hidden transition-all duration-300 ${selectedCar?.vehicleId === car.vehicleId ? 'ring-4 ring-blue-500 scale-105' : 'hover:shadow-xl hover:scale-105'}`}>
                   <img src={car.imageUrl || 'https://i.imgur.com/8N4e6c2.png'} alt={car.name} className="w-full h-48 object-cover" />
                   <div className="p-4 text-center">
                     <h3 className="text-lg font-bold text-gray-800">{car.name}</h3>
