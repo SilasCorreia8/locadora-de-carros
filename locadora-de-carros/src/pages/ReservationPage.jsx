@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchVehicles, fetchCustomers, createReservation } from '../services/api';
 // Função para calcular a diferença de dias entre duas datas.
 function calculateDays(startDate, endDate) {
@@ -29,7 +29,7 @@ function ReservationPage() {
   const [dates, setDates] = useState({ startDate: '', endDate: '' }); 
 
   // Estado para guardar as mensagens de erro de cada campo.
-  const [errors, setErrors] = useState({});
+  const [formErrors, setFormErrors] = useState({});
 
   // Capturar data de hoje
   // Cria uma string com a data de hoje no formato YYYY-MM-DD,
@@ -100,8 +100,9 @@ function ReservationPage() {
   };
 
   // Função para atualizar o estado das datas.
-  const handleDateChange = (event) => { 
-    setDates(prev => ({ ...prev, [name]: event.target.name, value: event.target.value })); 
+  const handleDateChange = (event) => {
+    const { name, value } = event.target;
+    setDates(prev => ({ ...prev, [name]: value }));
   };
 
   // Função para verificar os dados do formulário e retornar um objeto com os erros.
@@ -122,27 +123,17 @@ function ReservationPage() {
     return newErrors;
   };   
 
-  
-
   // Função chamada quando o formulário é enviado.
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
-      // Alerta para o funcionário caso o carro não tenha sido selecionado
-      if (formErrors.car) alert(formErrors.car);
-    } else {
-      setErrors({});
-      // Simula o envio dos dados para o back-end.
-      console.log("Dados da reserva a serem registrados:", {
-        customerDetails: selectedCustomer,
-        carDetails: selectedCar,
-        dates: dates,
-        totalPrice: totalPrice,
-      });
-      navigate('/confirmation');
+    const localErrors = validateForm();
+    if (Object.keys(localErrors).length > 0) {
+      setFormErrors(localErrors);
+      if (localErrors.car) alert(localErrors.car);
+      return; // Impede o envio se houver erros locais
     }
+
+    setFormErrors({});
 
     const reservationPayload = {
       customerData: {
@@ -193,14 +184,14 @@ function ReservationPage() {
                 <div>
                   <label htmlFor="startDate" className="block text-sm font-medium">Data de Retirada</label>
                   <input type="date" name="startDate" id="startDate" value={dates.startDate} onChange={handleDateChange} min={today}
-                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.startDate ? 'border-red-500' : 'border-gray-300'}`} />
-                  {errors.startDate && <p className="mt-1 text-xs text-red-600">{errors.startDate}</p>}
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${formErrors.startDate ? 'border-red-500' : 'border-gray-300'}`} />
+                  {formErrors.startDate && <p className="mt-1 text-xs text-red-600">{formErrors.startDate}</p>}
                 </div>
                 <div>
                   <label htmlFor="endDate" className="block text-sm font-medium">Data de Devolução</label>
                   <input type="date" name="endDate" id="endDate" value={dates.endDate} onChange={handleDateChange} min={dates.startDate || today}
-                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${errors.endDate ? 'border-red-500' : 'border-gray-300'}`} />
-                  {errors.endDate && <p className="mt-1 text-xs text-red-600">{errors.endDate}</p>}
+                    className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${formErrors.endDate ? 'border-red-500' : 'border-gray-300'}`} />
+                  {formErrors.endDate && <p className="mt-1 text-xs text-red-600">{formErrors.endDate}</p>}
                 </div>
               </div>
               {/* Valor Total e Botão */}
