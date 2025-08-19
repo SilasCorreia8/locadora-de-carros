@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchVehicles, fetchCustomers, createReservation } from '../services/api';
+
 // Função para calcular a diferença de dias entre duas datas.
 function calculateDays(startDate, endDate) {
   if (!startDate || !endDate) return 0;
@@ -95,8 +96,12 @@ function ReservationPage() {
 
   // Função executada quando o funcionário clica em um carro na lista.
   const handleCarSelect = (car) => { 
+    if (car.vehicleStatus !== 'AVAILABLE') {
+      alert(`Este veículo (${car.name}) não está disponível para reserva no momento. Status: ${car.vehicleStatus}`);
+      return;
+    }
     setSelectedCar(car);
-    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Função para atualizar o estado das datas.
@@ -182,7 +187,7 @@ function ReservationPage() {
               {/* Campos de Data */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:col-span-2 gap-4">
                 <div>
-                  <label htmlFor="startDate" className="block text-sm font-medium">Data de Retirada</label>
+                  <label htmlFor="startDate" className="block text-sm font-medium">Data de Locação</label>
                   <input type="date" name="startDate" id="startDate" value={dates.startDate} onChange={handleDateChange} min={today}
                     className={`mt-1 block w-full rounded-md shadow-sm sm:text-sm ${formErrors.startDate ? 'border-red-500' : 'border-gray-300'}`} />
                   {formErrors.startDate && <p className="mt-1 text-xs text-red-600">{formErrors.startDate}</p>}
@@ -229,17 +234,40 @@ function ReservationPage() {
           <h2 className="text-2xl font-bold mb-4">Passo 2: Selecione o Carro para <span className="text-blue-600">{selectedCustomer.name}</span></h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {cars.map(car => (
-              <div key={car.vehicleId} onClick={() => handleCarSelect(car)} className="cursor-pointer">
-                {/* O card agora usa os dados adaptados da API */}
-                <div className={`rounded-lg shadow-md overflow-hidden transition-all duration-300 ${selectedCar?.vehicleId === car.vehicleId ? 'ring-4 ring-blue-500 scale-105' : 'hover:shadow-xl hover:scale-105'}`}>
+              // O card só é clicável se o carro estiver disponível
+              <div key={car.vehicleId} onClick={() => handleCarSelect(car)} className={car.vehicleStatus === 'AVAILABLE' ? 'cursor-pointer' : 'cursor-not-allowed'}>
+                {/* Opacidade para carros indisponíveis */}
+                <div className={`flex flex-col h-full rounded-lg shadow-md overflow-hidden transition-all duration-300 ${selectedCar?.vehicleId === car.vehicleId ? 'ring-4 ring-blue-500 scale-105' : 'hover:shadow-xl hover:scale-105'} ${car.vehicleStatus !== 'AVAILABLE' ? 'opacity-50' : ''}`}>
                   <img src={car.imageUrl || 'https://i.imgur.com/8N4e6c2.png'} alt={car.name} className="w-full h-48 object-cover" />
-                  <div className="p-4 text-center">
+                  <div className="p-4 text-center flex flex-col flex-grow">
                     <h3 className="text-lg font-bold text-gray-800">{car.name}</h3>
-                    <p className="text-sm text-gray-500">{car.type}</p>
-                    <p className="mt-4 text-xl font-bold text-gray-900">
-                      R$ {car.pricePerDay.toFixed(2)}
-                      <span className="text-sm font-normal text-gray-500"> / dia</span>
-                    </p>
+                    <p className="text-sm text-gray-500 mb-2">{car.licensePlate}</p>
+                    
+                    {/* Container para os detalhes extras */}
+                    <div className="text-left text-sm text-gray-600 space-y-1 my-4 border-t border-b py-2">
+                      <p><strong>Ano:</strong> {car.year}</p>
+                      <p><strong>Cor:</strong> {car.color}</p>
+                      <p><strong>Combustível:</strong> {car.fuel}</p>
+                      <p><strong>Portas:</strong> {car.doors}</p>
+                      <p><strong>Km:</strong> {car.mileage}</p>
+                      <p><strong>Placa:</strong> {car.licensePlate}</p>
+                      <p><strong>Status:</strong> 
+                        <span className={`font-bold ${
+                          car.vehicleStatus === 'AVAILABLE' ? 'text-green-600' : 
+                          car.vehicleStatus === 'RESERVED' ? 'text-orange-500' : 'text-red-600'
+                        }`}>
+                          {car.vehicleStatus}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="mt-auto">
+                      <p className="text-xl font-bold text-gray-900">
+                        R$ {car.pricePerDay.toFixed(2)}
+                        <span className="text-sm font-normal text-gray-500"> / dia</span>
+                      </p>
+                    </div>
+
                   </div>
                 </div>
               </div>

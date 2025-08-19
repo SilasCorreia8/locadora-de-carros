@@ -7,11 +7,6 @@ function Header() {
         <Link to="/" className="text-lg sm:text-xl font-bold hover:text-gray-300">
           Carros.com
         </Link>
-        <nav>
-          <Link to="/login" className="hover:text-gray-300">
-            Login
-          </Link>
-        </nav>
       </div>
     </header>
   );
